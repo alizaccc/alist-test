@@ -13,18 +13,24 @@ jobs:
         with:
           go-version: '1.25'
 
-      # 配置环境+拉取缺失的依赖
+      # 1. 基础环境配置
       - run: go env -w GOPROXY=https://goproxy.cn,direct
       - run: go env -w GOSUMDB=off
-      - run: go get github.com/OpenListTeam/OpenList/v4
-      - run: go clean -modcache
-      - run: go mod tidy -e
-      - run: go mod download
 
-      # 编译主程序
+      # 2. 强制拉取所有缺失的依赖包
+      - run: go get github.com/OpenListTeam/OpenList/v4/drivers/halacloud_open
+      - run: go get github.com/RoaringBitmap/roaring/v2@v2.4.5
+
+      # 3. 全量清理+整理依赖，补全go.mod和go.sum
+      - run: go clean -modcache
+      - run: go mod tidy -x
+      - run: go mod verify
+      - run: go mod download -x
+
+      # 4. 编译主程序
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
 
-      # 登录并推送镜像
+      # 5. 登录DockerHub并推送镜像
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
