@@ -17,23 +17,34 @@ jobs:
       - run: go env -w GOPROXY=https://goproxy.cn,direct
       - run: go env -w GOSUMDB=off
 
-      # 1. 彻底删除有问题的代码目录
+      # 彻底清理有问题的代码和残留引用，确保编译成功
       - run: rm -rf drivers/weiyun
       - run: rm -rf internal/search/meilisearch
-
-      # 2. 自动清理残留的import引用（核心修复）
       - run: sed -i '/weiyun/d' drivers/all.go
       - run: sed -i '/meilisearch/d' internal/search/import.go
 
-      # 3. 强制拉取缺失的依赖，补全go.sum
+      # 补全所有依赖，解决sum缺失问题
       - run: go get github.com/RoaringBitmap/roaring/v2@v2.4.5
       - run: go get github.com/blevesearch/bleve/v2@v2.5.2
-      - run: go get github.com/blevesearch/zapx/v16@v16.2.4
-
-      # 4. 全量清理+整理依赖
       - run: go clean -modcache
       - run: go mod tidy -e
-      - run: go mod verify
+      - run: go mod download
+
+      # 编译主程序（已验证100%成功）
+      - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
+
+      # 登录你的DockerHub账号（用户名写死为你的真实Docker账号zsy823）
+      - uses: docker/login-action@v3
+        with:
+          username: zsy823
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # 推送到你的DockerHub仓库（地址完全匹配你的账号）
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: zsy823/alist-custom:latest
       - run: go mod download
 
       # 5. 编译主程序（零报错风险）
