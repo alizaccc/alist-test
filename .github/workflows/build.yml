@@ -12,20 +12,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 修复所有 shell 脚本的换行符（兜底）
-      - name: Fix shell scripts
-        run: |
-          find . -name "*.sh" -exec sed -i 's/\r$//' {} \;
-          chmod +x *.sh
-
-      # 登录 DockerHub
+      # 登录DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 直接用 Dockerfile 构建，不通过 build.sh
+      # 构建并推送镜像（直接用上面的Dockerfile，完全不用build.sh）
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
