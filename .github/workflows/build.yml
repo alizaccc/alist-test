@@ -15,17 +15,21 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.25'
-          check-latest: true
 
-      - name: Fix 404 Loop & Download Dependencies
-        run: |
-          go env -w GOPROXY=https://goproxy.cn,direct
-          go env -w GONOPROXY=github.com/songgao/*
-          go env -w GONOSUMDB=github.com/songgao/*
-          go env -w GOSUMDB=off
-          go clean -modcache
-          go mod tidy -e
-          go mod download
+      - name: Set Go Proxy
+        run: go env -w GOPROXY=https://goproxy.cn,direct
+
+      - name: Disable Sum Check
+        run: go env -w GOSUMDB=off
+
+      - name: Clean Mod Cache
+        run: go clean -modcache
+
+      - name: Fix Dependencies
+        run: go mod tidy -e
+
+      - name: Download Dependencies
+        run: go mod download
 
       - name: Build Alist Binary
         run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
@@ -34,6 +38,14 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: alizaccc/alist-custom:latest
           password: ${{ secrets.DOCKER_TOKEN }}
 
       - name: Build and Push Image
