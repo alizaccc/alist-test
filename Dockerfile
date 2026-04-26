@@ -1,4 +1,4 @@
-FROM alpine:edge as builder
+FROM golang:1.25-alpine as builder
 LABEL stage=go-builder
 WORKDIR /app/
 RUN apk add --no-cache bash curl gcc git go musl-dev
@@ -7,7 +7,7 @@ RUN go mod download
 COPY ./ ./
 RUN bash build.sh release docker
 
-FROM alpine:edge
+FROM golang:1.25-alpine
 
 ARG INSTALL_FFMPEG=false
 ARG INSTALL_ARIA2=false
