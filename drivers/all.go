@@ -44,7 +44,7 @@ import (
 	_ "github.com/alist-org/alist/v3/drivers/google_photo"
 	_ "github.com/alist-org/alist/v3/drivers/guangyapan"
 	_ "github.com/alist-org/alist/v3/drivers/halalcloud"
-	_ "github.com/OpenListTeam/OpenList/tree/main/drivers/halalcloud_open"
+	_ "github.com/OpenListTeam/OpenList/v4/drivers/halalcloud_open"
 	_ "github.com/alist-org/alist/v3/drivers/ilanzou"
 	_ "github.com/alist-org/alist/v3/drivers/ipfs_api"
 	_ "github.com/alist-org/alist/v3/drivers/kodbox"
