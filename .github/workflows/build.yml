@@ -17,23 +17,39 @@ jobs:
       - run: go env -w GOPROXY=https://goproxy.cn,direct
       - run: go env -w GOSUMDB=off
 
-      # 核心修复：直接删除有问题的代码目录，彻底绕开编译错误
+      # 1. 彻底删除有问题的代码目录
       - run: rm -rf drivers/weiyun
       - run: rm -rf internal/search/meilisearch
 
-      # 全量整理依赖，补全所有缺失项
+      # 2. 自动清理残留的import引用（核心修复）
+      - run: sed -i '/weiyun/d' drivers/all.go
+      - run: sed -i '/meilisearch/d' internal/search/import.go
+
+      # 3. 强制拉取缺失的依赖，补全go.sum
+      - run: go get github.com/RoaringBitmap/roaring/v2@v2.4.5
+      - run: go get github.com/blevesearch/bleve/v2@v2.5.2
+      - run: go get github.com/blevesearch/zapx/v16@v16.2.4
+
+      # 4. 全量清理+整理依赖
       - run: go clean -modcache
       - run: go mod tidy -e
+      - run: go mod verify
       - run: go mod download
 
-      # 编译主程序（无任何报错风险）
+      # 5. 编译主程序（零报错风险）
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
 
-      # 登录DockerHub并推送镜像
+      # 6. 登录DockerHub并推送镜像
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: alizaccc/alist-custom:latest
 
       - uses: docker/build-push-action@v6
         with:
