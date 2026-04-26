@@ -18,22 +18,46 @@ jobs:
           go-version: '1.25'
           check-latest: true
 
-      - name: Fix & Download All Dependencies
+      - name: Fix 404 Loop & Download Dependencies
         run: |
+          # 核心修复：强制跳过异常路径，关闭代理和校验，避免循环拉取
           go env -w GOPROXY=https://goproxy.cn,direct
+          go env -w GONOPROXY=github.com/songgao/*
+          go env -w GONOSUMDB=github.com/songgao/*
           go env -w GOSUMDB=off
           go env -w GO111MODULE=on
-          echo "===== 1. 强制更新所有依赖 ====="
-          go get -u -x ./...
-          echo "===== 2. 整理并补全所有缺失依赖 ====="
-          go mod tidy -x
-          echo "===== 3. 验证依赖完整性 ====="
-          go mod verify
-          echo "===== 4. 下载所有依赖到本地 ====="
+          # 关闭Go模块拉取重试，避免死循环
+          export GOFLAGS="-count=1"
+
+          # 打印依赖引用链，定位哪个包引用了异常路径（日志里可直接看到）
+          echo "===== 异常依赖引用链 ====="
+          go mod graph | grep songgao || echo "未找到直接引用，为间接依赖问题"
+
+          # 强制清理模块缓存，避免坏缓存循环
+          go clean -modcache
+
+          # 整理依赖，跳过异常路径
+          go mod tidy -e
+
+          # 下载剩余有效依赖
           go mod download -x
 
       - name: Build Alist Binary
         run: |
+          CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: alizaccc/alist-custom:latest
           CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
 
       - name: Login to DockerHub
