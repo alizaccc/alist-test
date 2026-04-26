@@ -19,10 +19,14 @@ jobs:
           go-version: '1.25'
           check-latest: true
 
-      # 2. 配置Go代理+拉取依赖（打印完整日志，失败直接看哪里出问题）
+      # 2. 更换稳定代理+拉取依赖（解决502报错）
       - name: Download Go dependencies
         run: |
-          go env -w GOPROXY=https://goproxy.io,direct
+          # 更换为七牛稳定Go代理，解决502网关错误
+          go env -w GOPROXY=https://goproxy.cn,direct
+          # 关闭sumdb校验，避免部分包校验超时
+          go env -w GOSUMDB=off
+          # 拉取依赖，打印完整日志
           go mod download -x
 
       # 3. 编译Alist主程序
@@ -37,7 +41,7 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 5. 打包Docker镜像并推送（只有复制，无任何构建步骤）
+      # 5. 打包Docker镜像并推送
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
