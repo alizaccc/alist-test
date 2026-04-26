@@ -1,93 +1,31 @@
-name: Build & Push Alist Docker Image
+name: Build Alist Docker
 on:
   push:
-    branches: [ 'main' ]
+    branches: [ main ]
 
 jobs:
-  build-and-push:
-    name: Build & Push Docker
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
 
-      - name: Set Go Proxy
-        run: go env -w GOPROXY=https://goproxy.cn,direct
+      - run: go env -w GOPROXY=https://goproxy.cn,direct
+      - run: go env -w GOSUMDB=off
+      - run: go clean -modcache
+      - run: go mod tidy -e
+      - run: go mod download
+      - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
 
-      - name: Disable Sum Check
-        run: go env -w GOSUMDB=off
-
-      - name: Clean Mod Cache
-        run: go clean -modcache
-
-      - name: Fix Dependencies
-        run: go mod tidy -e
-
-      - name: Download Dependencies
-        run: go mod download
-
-      - name: Build Alist Binary
-        run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and Push Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: alizaccc/alist-custom:latest
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Build and Push Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: alizaccc/alist-custom:latest
-          go clean -modcache
-
-          # 整理依赖，跳过异常路径
-          go mod tidy -e
-
-          # 下载剩余有效依赖
-          go mod download -x
-
-      - name: Build Alist Binary
-        run: |
-          CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: alizaccc/alist-custom:latest
-          CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
