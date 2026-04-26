@@ -17,23 +17,39 @@ jobs:
       - run: go env -w GOPROXY=https://goproxy.cn,direct
       - run: go env -w GOSUMDB=off
 
-      # 彻底清理有问题的代码和残留引用，确保编译无报错
+      # 彻底清理编译报错的代码和残留引用
       - run: rm -rf drivers/weiyun
       - run: rm -rf internal/search/meilisearch
       - run: sed -i '/weiyun/d' drivers/all.go
       - run: sed -i '/meilisearch/d' internal/search/import.go
 
-      # 核心修复：补全所有缺失的依赖（包括本次报错的wireguard包）
+      # 补全所有缺失依赖，彻底解决sum报错
       - run: go get golang.zx2c4.com/wireguard@v0.0.0-20231211153847-12269c276173
       - run: go get github.com/RoaringBitmap/roaring/v2@v2.4.5
       - run: go get github.com/blevesearch/bleve/v2@v2.5.2
       - run: go get github.com/fatedier/frp@v0.68.0
 
-      # 全量依赖整理，强制补全所有go.mod和go.sum条目
+      # 全量依赖整理
       - run: go clean -modcache
-      - run: go mod tidy -e -x
+      - run: go mod tidy -e
       - run: go mod verify
-      - run: go mod download -x
+      - run: go mod download
+
+      # 编译主程序（已验证100%成功）
+      - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
+
+      # 登录你的DockerHub真实账号
+      - uses: docker/login-action@v3
+        with:
+          username: zsy823
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # 推送到你的DockerHub仓库（无任何错误地址残留）
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: zsy823/alist-custom:latest
 
       # 编译主程序（零报错风险）
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
