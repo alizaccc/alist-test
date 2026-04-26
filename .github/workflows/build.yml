@@ -12,20 +12,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 登录 DockerHub
+      # 登录 DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 2. 构建并推送镜像
+      # 构建并推送镜像（去掉多平台，只构建 amd64）
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          # 这里改成你的 DockerHub 用户名和镜像名
           tags: alizaccc/alist-custom:latest
-          # 可选：添加构建参数，如果你需要指定平台
-          platforms: linux/amd64,linux/arm64
