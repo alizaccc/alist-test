@@ -1,25 +1,31 @@
-name: Build & Push Alist
+name: Build & Push Alist Docker Image
 
 on:
   push:
-    branches: [ main ]
+    branches: [ 'main' ]
 
 jobs:
-  build:
+  build-and-push:
+    name: Build & Push Docker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1. 登录 DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and push Docker image
+      # 2. 构建并推送镜像
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          # 这里改成你的 DockerHub 用户名和镜像名
           tags: alizaccc/alist-custom:latest
+          # 可选：添加构建参数，如果你需要指定平台
+          platforms: linux/amd64,linux/arm64
