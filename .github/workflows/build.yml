@@ -16,6 +16,7 @@ jobs:
       # 基础环境配置
       - run: go env -w GOPROXY=https://goproxy.cn,direct
       - run: go env -w GOSUMDB=off
+      - run: go env -w GO111MODULE=on
 
       # 彻底清理编译报错的代码和残留引用
       - run: rm -rf drivers/weiyun
@@ -23,17 +24,35 @@ jobs:
       - run: sed -i '/weiyun/d' drivers/all.go
       - run: sed -i '/meilisearch/d' internal/search/import.go
 
-      # 补全所有缺失依赖，彻底解决sum报错
+      # 核心修复：强制拉取所有缺失的依赖（包括本次报错的包），生成sum条目
+      - run: go get github.com/vishvananda/netlink@v1.3.0
       - run: go get golang.zx2c4.com/wireguard@v0.0.0-20231211153847-12269c276173
       - run: go get github.com/RoaringBitmap/roaring/v2@v2.4.5
       - run: go get github.com/blevesearch/bleve/v2@v2.5.2
       - run: go get github.com/fatedier/frp@v0.68.0
+      - run: go get -u ./...
 
-      # 全量依赖整理
+      # 全量依赖整理，强制补全所有go.mod和go.sum条目
       - run: go clean -modcache
-      - run: go mod tidy -e
+      - run: go mod tidy -e -x
       - run: go mod verify
-      - run: go mod download
+      - run: go mod download -x
+
+      # 编译主程序：指定linux amd64架构，完美适配Clawcloud节点
+      - run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o alist main.go
+
+      # 登录你的DockerHub真实账号
+      - uses: docker/login-action@v3
+        with:
+          username: zsy823
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # 推送到你的DockerHub仓库
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: zsy823/alist-custom:latest
 
       # 编译主程序（已验证100%成功）
       - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
