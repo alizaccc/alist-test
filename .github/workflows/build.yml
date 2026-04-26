@@ -12,22 +12,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 设置Go环境（和源码要求的版本完全匹配）
+      # 1. 设置Go环境
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.25'
           check-latest: true
 
-      # 2. 更换稳定代理+拉取依赖（解决502报错）
-      - name: Download Go dependencies
+      # 2. 配置代理+拉取全量依赖（修复缺失包）
+      - name: Fix & Download Go dependencies
         run: |
-          # 更换为七牛稳定Go代理，解决502网关错误
           go env -w GOPROXY=https://goproxy.cn,direct
-          # 关闭sumdb校验，避免部分包校验超时
           go env -w GOSUMDB=off
-          # 拉取依赖，打印完整日志
-          go mod download -x
+          # 手动拉取报错缺失的依赖包
+          go get github.com/OpenListTeam/OpenList/v4
+          # 自动整理所有依赖，补全go.mod里缺失的包
+          go mod tidy
+          # 验证所有依赖都拉取成功
+          go mod verify
 
       # 3. 编译Alist主程序
       - name: Build Alist binary
