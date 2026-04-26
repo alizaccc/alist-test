@@ -18,7 +18,7 @@ jobs:
       - run: go env -w GOSUMDB=off
 
       # 2. 强制拉取所有缺失的依赖包
-      - run: go get github.com/OpenListTeam/OpenList/v4/drivers/halacloud_open@main
+      - run: go get github.com/OpenListTeam/OpenList/v4/drivers/halalcloud_open@main
       - run: go get github.com/RoaringBitmap/roaring/v2@v2.4.5
 
       # 3. 全量清理+整理依赖，补全go.mod和go.sum
