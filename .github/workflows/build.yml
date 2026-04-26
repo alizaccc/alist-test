@@ -12,18 +12,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 强制清除Windows换行符 + 加执行权限
-      - name: Fix shell script
+      # 修复所有 shell 脚本的换行符（兜底）
+      - name: Fix shell scripts
         run: |
-          find . -name "*.sh" -exec sed -i 's/\r//g' {} \;
+          find . -name "*.sh" -exec sed -i 's/\r$//' {} \;
           chmod +x *.sh
 
+      # 登录 DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      # 直接用 Dockerfile 构建，不通过 build.sh
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
