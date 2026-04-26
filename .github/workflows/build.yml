@@ -76,10 +76,10 @@ jobs:
         with:
           context: .
           push: true
-          tags: alizaccc/alist-custom:latest
+          tags: zsy823/alist-custom:latest
 
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: alizaccc/alist-custom:latest
+          tags: zsy823/alist-custom:latest
