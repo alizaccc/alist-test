@@ -12,20 +12,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 关键：把 build.sh 转成 Linux 换行格式
-      - name: Fix line endings
+      # 强制清除Windows换行符 + 加执行权限
+      - name: Fix shell script
         run: |
-          sed -i 's/\r$//' build.sh
-          chmod +x build.sh
+          find . -name "*.sh" -exec sed -i 's/\r//g' {} \;
+          chmod +x *.sh
 
-      # 登录 DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 构建并推送镜像
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
