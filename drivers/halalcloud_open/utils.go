@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
+	"github.com/alist-org/alist/v3/pkg/utils"
 	sdkUserFile "github.com/halalcloud/golang-sdk-lite/halalcloud/services/userfile"
 	"github.com/ipfs/go-cid"
 )
