@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/OpenListTeam/OpenList/v4/internal/op"
+	"github.com/alist-org/alist/v3/internal/op"
 	"github.com/halalcloud/golang-sdk-lite/halalcloud/apiclient"
 	sdkUser "github.com/halalcloud/golang-sdk-lite/halalcloud/services/user"
 	sdkUserFile "github.com/halalcloud/golang-sdk-lite/halalcloud/services/userfile"
