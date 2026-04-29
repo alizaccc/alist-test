@@ -1,17 +1,15 @@
 name: 构建并发布Alist自定义Docker镜像
 on:
-  # 触发规则：推送到main分支自动更新latest标签；推送v开头的tag自动生成对应版本镜像
   push:
     branches: [ main ]
     tags: [ 'v*' ]
-  # PR提交时仅构建不推送，提前校验代码是否可正常编译
   pull_request:
     branches: [ main ]
 
 env:
-  # 固定为Docker Hub官方仓库地址
+  # 解决Node.js 20弃用警告，强制使用Node24
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: docker.io
-  # 你的目标镜像仓库名称
   IMAGE_NAME: zsy823/alist-custom
 
 jobs:
@@ -19,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    # 支持多架构构建（amd64/arm64），适配群晖、树莓派、服务器等多种设备
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -28,62 +26,41 @@ jobs:
           - linux/arm64
 
     steps:
-      # 步骤1：拉取仓库完整代码
       - name: 检出仓库代码
         uses: actions/checkout@v4
 
-      # 步骤2：配置QEMU 支持多架构镜像构建
-      - name: 配置QEMU
+      - name: 配置QEMU 支持多架构构建
         uses: docker/setup-qemu-action@v3
 
-      # 步骤3：配置Docker Buildx 构建加速
-      - name: 配置Docker Buildx
+      - name: 配置Docker Buildx 构建加速
         uses: docker/setup-buildx-action@v3
 
-      # 步骤4：登录Docker Hub（仅非PR场景执行登录推送）
       - name: 登录Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          # Docker Hub用户名固定为zsy823（与镜像前缀一致）
           username: zsy823
-          # 引用你已配置的密钥DOCKER_TOKEN
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 步骤5：自动生成镜像标签（main分支生成latest，tag推送生成对应版本号）
       - name: 生成镜像元数据与标签
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # 标签规则：可根据需求调整
           tags: |
-            # 推送到main分支自动更新latest标签
             type=raw,value=latest,enable={{is_default_branch}}
-            # 推送v*标签时（如v3.40.0），自动生成对应版本标签
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      # 步骤6：构建并推送镜像
       - name: 构建并推送Docker镜像
         uses: docker/build-push-action@v5
         with:
-          # 构建上下文为仓库根目录，读取根目录的Dockerfile
           context: .
           file: ./Dockerfile
-          # 仅非PR场景推送镜像，PR仅做构建校验
           push: ${{ github.event_name != 'pull_request' }}
-          # 多架构构建
           platforms: ${{ matrix.platform }}
-          # 引用自动生成的标签
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # 启用GitHub Actions缓存，大幅提升二次构建速度
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: zsy823/alist-custom:latest
