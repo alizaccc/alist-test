@@ -22,7 +22,6 @@ var config = driver.Config{
 	Name:        "HalalCloudOpen",
 	OnlyProxy:   false,
 	DefaultRoot: "/",
-	NoLinkURL:   false,
 }
 
 func init() {
