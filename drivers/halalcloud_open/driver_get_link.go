@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/OpenListTeam/OpenList/v4/internal/model"
-	"github.com/OpenListTeam/OpenList/v4/internal/stream"
-	"github.com/OpenListTeam/OpenList/v4/pkg/http_range"
+	"github.com/alist-org/alist/v3/internal/model"
+	"github.com/alist-org/alist/v3/internal/stream"
+	"github.com/alist-org/alist/v3/pkg/http_range"
 	sdkUserFile "github.com/halalcloud/golang-sdk-lite/halalcloud/services/userfile"
 	"github.com/rclone/rclone/lib/readers"
 )
