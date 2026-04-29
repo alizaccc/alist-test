@@ -3,8 +3,8 @@ package halalcloudopen
 import (
 	"context"
 
-	"github.com/OpenListTeam/OpenList/v4/internal/driver"
-	"github.com/OpenListTeam/OpenList/v4/internal/model"
+	"github.com/alist-org/alist/v3/internal/driver"
+	"github.com/alist-org/alist/v3/internal/model"
 )
 
 func (d *HalalCloudOpen) Drop(ctx context.Context) error {
