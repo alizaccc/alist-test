@@ -3,7 +3,7 @@ package halalcloudopen
 import (
 	"context"
 
-	"github.com/OpenListTeam/OpenList/v4/internal/model"
+	"github.com/alist-org/alist/v3/internal/model"
 	sdkModel "github.com/halalcloud/golang-sdk-lite/halalcloud/model"
 	sdkUserFile "github.com/halalcloud/golang-sdk-lite/halalcloud/services/userfile"
 )
