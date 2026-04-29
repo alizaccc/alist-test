@@ -1,118 +1,87 @@
-name: Build Alist Docker
+name: 构建并发布Alist自定义Docker镜像
 on:
+  # 触发规则：推送到main分支自动更新latest标签；推送v开头的tag自动生成对应版本镜像
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
+  # PR提交时仅构建不推送，提前校验代码是否可正常编译
+  pull_request:
+    branches: [ main ]
+
+env:
+  # 固定为Docker Hub官方仓库地址
+  REGISTRY: docker.io
+  # 你的目标镜像仓库名称
+  IMAGE_NAME: zsy823/alist-custom
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # 支持多架构构建（amd64/arm64），适配群晖、树莓派、服务器等多种设备
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+
     steps:
-      - uses: actions/checkout@v4
+      # 步骤1：拉取仓库完整代码
+      - name: 检出仓库代码
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      # 步骤2：配置QEMU 支持多架构镜像构建
+      - name: 配置QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # 步骤3：配置Docker Buildx 构建加速
+      - name: 配置Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 步骤4：登录Docker Hub（仅非PR场景执行登录推送）
+      - name: 登录Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
         with:
-          go-version: '1.25'
-
-      # 基础环境配置
-      - run: go env -w GOPROXY=https://goproxy.cn,direct
-      - run: go env -w GOSUMDB=off
-      - run: go env -w GO111MODULE=on
-
-      # 彻底清理编译报错的代码和残留引用
-      - run: rm -rf drivers/weiyun
-      - run: rm -rf internal/search/meilisearch
-      - run: sed -i '/weiyun/d' drivers/all.go
-      - run: sed -i '/meilisearch/d' internal/search/import.go
-
-      # 核心修复：强制拉取所有缺失的依赖（包括本次报错的包），生成sum条目
-      - run: go get github.com/vishvananda/netlink@v1.3.0
-      - run: go get golang.zx2c4.com/wireguard@v0.0.0-20231211153847-12269c276173
-      - run: go get github.com/RoaringBitmap/roaring/v2@v2.4.5
-      - run: go get github.com/blevesearch/bleve/v2@v2.5.2
-      - run: go get github.com/fatedier/frp@v0.68.0
-      - run: go get -u ./...
-
-      # 全量依赖整理，强制补全所有go.mod和go.sum条目
-      - run: go clean -modcache
-      - run: go mod tidy -e -x
-      - run: go mod verify
-      - run: go mod download -x
-
-      # 编译主程序：指定linux amd64架构，完美适配Clawcloud节点
-      - run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o alist main.go
-
-      # 登录你的DockerHub真实账号
-      - uses: docker/login-action@v3
-        with:
+          registry: ${{ env.REGISTRY }}
+          # Docker Hub用户名固定为zsy823（与镜像前缀一致）
           username: zsy823
+          # 引用你已配置的密钥DOCKER_TOKEN
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 推送到你的DockerHub仓库
-      - uses: docker/build-push-action@v6
+      # 步骤5：自动生成镜像标签（main分支生成latest，tag推送生成对应版本号）
+      - name: 生成镜像元数据与标签
+        id: meta
+        uses: docker/metadata-action@v5
         with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # 标签规则：可根据需求调整
+          tags: |
+            # 推送到main分支自动更新latest标签
+            type=raw,value=latest,enable={{is_default_branch}}
+            # 推送v*标签时（如v3.40.0），自动生成对应版本标签
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      # 步骤6：构建并推送镜像
+      - name: 构建并推送Docker镜像
+        uses: docker/build-push-action@v5
+        with:
+          # 构建上下文为仓库根目录，读取根目录的Dockerfile
           context: .
-          push: true
-          tags: zsy823/alist-custom:latest
-
-      # 编译主程序（已验证100%成功）
-      - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
-
-      # 登录你的DockerHub真实账号
-      - uses: docker/login-action@v3
-        with:
-          username: zsy823
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      # 推送到你的DockerHub仓库（无任何错误地址残留）
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: zsy823/alist-custom:latest
-
-      # 编译主程序（零报错风险）
-      - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
-
-      # 登录你的DockerHub账号
-      - uses: docker/login-action@v3
-        with:
-          username: zsy823
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      # 推送到你的DockerHub仓库
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: zsy823/alist-custom:latest
-      - uses: docker/login-action@v3
-        with:
-          username: zsy823
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      # 推送到你的DockerHub仓库（地址完全匹配你的账号）
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: zsy823/alist-custom:latest
-      - run: go mod download
-
-      # 5. 编译主程序（零报错风险）
-      - run: CGO_ENABLED=0 go build -ldflags "-s -w" -o alist main.go
-
-      # 6. 登录DockerHub并推送镜像
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: zsy823/alist-custom:latest
-
+          file: ./Dockerfile
+          # 仅非PR场景推送镜像，PR仅做构建校验
+          push: ${{ github.event_name != 'pull_request' }}
+          # 多架构构建
+          platforms: ${{ matrix.platform }}
+          # 引用自动生成的标签
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # 启用GitHub Actions缓存，大幅提升二次构建速度
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - uses: docker/build-push-action@v6
         with:
           context: .
