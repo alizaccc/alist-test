@@ -1,33 +1,41 @@
-# 第一阶段：构建前端
-FROM node:18-alpine AS frontend
+# 第一阶段：编译 Go 后端
+FROM --platform=$BUILDPLATFORM golang:1.22-alpine AS builder
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
+
+# 安装必要的工具
+RUN apk add --no-cache git curl build-base
+
+# 自动下载 Alist 官方的最新前端文件（无需手动打包前端）
+RUN mkdir -p public/dist && \
+    curl -L https://github.com/alist-org/web-dist/archive/refs/heads/main.tar.gz -o web-dist.tar.gz && \
+    tar -xzf web-dist.tar.gz && \
+    mv web-dist-main/dist/* public/dist/ && \
+    rm -rf web-dist-main web-dist.tar.gz
+
+# 拷贝全部代码并下载依赖
 COPY . .
-RUN pnpm build
+RUN go mod tidy
 
-# 第二阶段：编译 Go 后端
-FROM golang:1.22-alpine AS builder
-RUN apk add --no-cache gcc musl-dev
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-COPY --from=frontend /app/public/dist ./public/dist
-RUN go build -ldflags="-s -w" -o alist .
+# 获取目标系统架构并构建（支持多架构编译），禁用 CGO 以确保纯静态编译
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -tags=jsoniter -o alist main.go
 
-# 第三阶段：运行镜像
-FROM alpine:3.19
-RUN apk add --no-cache tzdata ca-certificates
-COPY --from=builder /app/alist /usr/local/bin/alist
-EXPOSE 5244
+# 第二阶段：构建最终镜像
+FROM alpine:latest
+LABEL maintainer="zsy823"
+
+# 安装时区及基础证书
+RUN apk add --no-cache ca-certificates tzdata && \
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+WORKDIR /opt/alist/
+
+# 从编译阶段拷贝编译好的二进制文件
+COPY --from=builder /app/alist ./
+
 VOLUME /opt/alist/data
-WORKDIR /opt/alist
-ENTRYPOINT ["alist"]
-# 暴露端口
 EXPOSE 5244
-# 数据卷持久化
-VOLUME /opt/alist/data
 
-# 启动命令
-ENTRYPOINT ["/opt/alist/alist", "server"]
+CMD["./alist", "server", "--no-prefix"]
