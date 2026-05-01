@@ -102,7 +102,6 @@ func (d *HalalCloudOpen) getLink(ctx context.Context, file model.Obj, args model
 	}
 
 	return &model.Link{
-		RangeReader: stream.RateLimitRangeReaderFunc(resultRangeReader),
 		Expiration:  &duration,
 	}, nil
 }
