@@ -2,16 +2,11 @@ package halalcloudopen
 
 import (
 	"context"
-	"crypto/sha1"
-	"io"
 	"strconv"
 	"time"
 
 	"github.com/alist-org/alist/v3/internal/model"
-	"github.com/alist-org/alist/v3/internal/stream"
-	"github.com/alist-org/alist/v3/pkg/http_range"
 	sdkUserFile "github.com/halalcloud/golang-sdk-lite/halalcloud/services/userfile"
-	"github.com/rclone/rclone/lib/readers"
 )
 
 func (d *HalalCloudOpen) getLink(ctx context.Context, file model.Obj, args model.LinkArgs) (*model.Link, error) {
@@ -43,7 +38,7 @@ func (d *HalalCloudOpen) getLink(ctx context.Context, file model.Obj, args model
 	if err != nil {
 		return nil, err
 	}
-	fileAddrs := []*sdkUserFile.SliceDownloadInfo{}
+
 	var addressDuration int64
 
 	nodesNumber := len(result.RawNodes)
@@ -67,32 +62,14 @@ func (d *HalalCloudOpen) getLink(ctx context.Context, file model.Obj, args model
 				return nil, err
 			}
 			addressDuration, _ = strconv.ParseInt(sliceAddress.ExpireAt, 10, 64)
-			fileAddrs = append(fileAddrs, sliceAddress.Addresses...)
+			// 注意：这里删除了多余的 fileAddrs 变量
 			startIndex = endIndex
 			nodesIndex -= 200
 		}
 
 	}
 
-	size, _ := strconv.ParseInt(result.FileSize, 10, 64)
-	chunks := getChunkSizes(result.Sizes)
-	resultRangeReader := func(ctx context.Context, httpRange http_range.Range) (io.ReadCloser, error) {
-		length := httpRange.Length
-		if httpRange.Length < 0 || httpRange.Start+httpRange.Length >= size {
-			length = size - httpRange.Start
-		}
-		oo := &openObject{
-			ctx:     ctx,
-			d:       fileAddrs,
-			chunk:   []byte{},
-			chunks:  chunks,
-			skip:    httpRange.Start,
-			sha:     result.Sha1,
-			shaTemp: sha1.New(),
-		}
-
-		return readers.NewLimitedReadCloser(oo, length), nil
-	}
+	// 注意：这里删除了 size, chunks 和 resultRangeReader 这几个废弃变量
 
 	var duration time.Duration
 	if addressDuration != 0 {
@@ -102,6 +79,6 @@ func (d *HalalCloudOpen) getLink(ctx context.Context, file model.Obj, args model
 	}
 
 	return &model.Link{
-		Expiration:  &duration,
+		Expiration: &duration,
 	}, nil
 }
