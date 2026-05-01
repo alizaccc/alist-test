@@ -112,16 +112,3 @@ func (d *HalalCloudOpen) remove(ctx context.Context, obj model.Obj) error {
 	})
 	return err
 }
-
-func (d *HalalCloudOpen) details(ctx context.Context) (*model.StorageDetails, error) {
-	ret, err := d.sdkUserService.GetStatisticsAndQuota(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &model.StorageDetails{
-		DiskUsage: model.DiskUsage{
-			TotalSpace: ret.DiskStatisticsQuota.BytesQuota,
-			UsedSpace:  ret.DiskStatisticsQuota.BytesUsed,
-		},
-	}, nil
-}
