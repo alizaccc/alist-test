@@ -1,66 +1,32 @@
-name: 构建并发布Alist自定义Docker镜像
+name: Build and Push Custom Alist Image
+
 on:
   push:
-    branches: [ main ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
-
-env:
-  # 解决Node.js 20弃用警告，强制使用Node24
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  REGISTRY: docker.io
-  IMAGE_NAME: zsy823/alist-custom
+    branches: [ "main" ]   # 触发分支，按需修改
+  workflow_dispatch:        # 允许手动触发
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-
     steps:
-      - name: 检出仓库代码
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 配置QEMU 支持多架构构建
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: 配置Docker Buildx 构建加速
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 登录Docker Hub
-        if: github.event_name != 'pull_request'
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: zsy823
-          password: ${{ secrets.DOCKER_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: 生成镜像元数据与标签
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
-      - name: 构建并推送Docker镜像
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          platforms: ${{ matrix.platform }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          push: true
+          tags: zsy823/alist-custom:latest
