@@ -43,11 +43,3 @@ func (d *HalalCloudOpen) Put(ctx context.Context, dstDir model.Obj, stream model
 	return d.put(ctx, dstDir, stream, up)
 }
 
-func (d *HalalCloudOpen) Remove(ctx context.Context, obj model.Obj) error {
-	return d.remove(ctx, obj)
-}
-
-func (d *HalalCloudOpen) Put(ctx context.Context, dstDir model.Obj, stream model.FileStreamer, up driver.UpdateProgress) (model.Obj, error) {
-	return d.put(ctx, dstDir, stream, up)
-}
-
