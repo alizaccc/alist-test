@@ -38,4 +38,4 @@ COPY --from=builder /app/alist ./
 VOLUME /opt/alist/data
 EXPOSE 5244
 
-CMD ["./alist", "server", "--no-prefix"]
+CMD ["./alist", "server"]
